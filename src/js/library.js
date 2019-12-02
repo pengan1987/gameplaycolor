@@ -15,11 +15,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
- 
-(function($) {
 
-  App.Library = function(store, callback) {
-    this.init(store, callback);
+(function($) {
+  
+  App.Library = function(store, callback, postInitCallback) {
+    this.init(store, callback, postInitCallback);
   };
 
   App.Library.State = {
@@ -34,27 +34,33 @@
 
   jQuery.extend(
     App.Library.prototype, {
-
-    init: function(store, callback) {
+    init: function(store, callback, postInitCallback) {
       var self = this;
       self.state = App.Library.State.UNINITIALIZED;
       self.items = [];
       self.changeCallbacks = [];
       self.stateChangeCallbacks = [];
-      self.drive = App.Drive.Instance();
-      self.store = store;
-      self.fetches = {};
-      self.callback = callback;
-      self.logging = new App.Logging(window.config.logging_level, "library");
-      
-      // Load the library.
-      var library = localStorage.getItem('library');
-      if (library) {
-        self.items = jQuery.parseJSON(library);
-      }
+      var driveCallback = function() {
+        self.store = store;
+        self.fetches = {};
+        self.callback = callback;
+        self.logging = new App.Logging(window.config.logging_level, "library");
 
-      self.sort();
-      
+        // Load the library.
+        var library = localStorage.getItem('library');
+        if (library) {
+          self.items = jQuery.parseJSON(library);
+        }
+
+        self.sort();
+
+        postInitCallback();
+      };
+      var driveInstance = App.Drive.Instance(driveCallback);
+      self.drive = driveInstance.drive;
+      if (!driveInstance.newInstance) {
+        driveCallback();
+      }
     },
 
     authorize: function() {
@@ -244,11 +250,9 @@
 
             self.logging.info("Received identifier '" + identifier + "'");
             element.removeClass("unavailable");
-
           }).fail(function() {
-
+            
             alert("Unable to download file.");
-
           }).always(function() {
 
             if (spinner !== undefined) {
