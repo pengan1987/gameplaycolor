@@ -112,19 +112,7 @@
 
         self.token().then(function(token) {
 
-          $.ajax({
-            type: 'GET',
-            url: 'https://accounts.google.com/o/oauth2/revoke?token=' + token,
-            async: false, // TODO Not neccessary?
-            contentType: "application/json",
-            dataType: 'jsonp',
-            success: function(nullResponse) {
-              deferred.resolve();
-            },
-            error: function(e) {
-              deferred.reject(e);
-            }
-          });
+          deferred.resolve();
 
         }).fail(function(e) {
 
@@ -159,7 +147,7 @@
         var deferred = jQuery.Deferred();
         self.track("authURL", deferred.promise());
 
-        var url = 'https://accounts.google.com/o/oauth2/auth' +
+        var url = 'https://localhost/o/oauth2/auth' +
                   '?redirect_uri=' + encodeURIComponent(window.config.redirect_uri) +
                   '&response_type=code' +
                   '&client_id=' + window.config.client_id +
@@ -178,35 +166,8 @@
         self.track("user", deferred.promise());
 
         self.token().then(function(token) {
-
-          $.ajax({
-            url: "https://www.googleapis.com/oauth2/v1/userinfo",
-            type: "GET",
-            data: {
-              "access_token": token
-            },
-            success: function(user, textStatus, jqXHR) {
-              deferred.resolve(user);
-            },
-            error: function(jqXHR, textStatus, error) {
-              if (jqXHR.status == 401 ||
-                  jqXHR.status == 403) {
-                self.handleInvalidToken().then(function() {
-
-                  self.user().then(function(user) {
-                    deferred.resolve(user);
-                  }).fail(function() {
-                    deferred.reject();
-                  });
-
-                }).fail(function() {
-                  deferred.reject(error);
-                });
-              } else {
-                deferred.reject(error);
-              }
-            }
-          });
+          var user = {name:"dummy"};
+          deferred.resolve(user);
 
         }).fail(function(e) {
           deferred.reject(e);
@@ -302,32 +263,25 @@
         return parameters;
       },
 
-      redeemToken: function(code) {
+      redeemToken: function (code, name) {
         var self = this;
 
         var deferred = jQuery.Deferred();
         self.track("redeemToken", deferred.promise());
 
-        $.ajax({
-          url: "https://www.googleapis.com/oauth2/v3/token",
-          type: "POST",
-          data: {
-            "code": code,
-            "client_id": window.config.client_id,
-            "client_secret": window.config.client_secret,
-            "redirect_uri": window.config.redirect_uri,
-            "grant_type": "authorization_code",
-            "state": "100000"
-          },
-          success: function(token, textStatus, jqXHR) {
-            // TODO Do I need to handle responses other than 200 here?
-            self.store.setProperty(App.Drive.DOMAIN, App.Drive.Property.TOKEN, token.access_token);
-            self.store.setProperty(App.Drive.DOMAIN, App.Drive.Property.REFRESH_TOKEN, token.refresh_token);
-            deferred.resolve();
-          },
-          error: function(jqXHR, textStatus, error) {
-            deferred.reject(error);
-          }
+        var tokenJson = { username: name, password: code }
+
+        self.client = WebDAV.createClient("https://andyzhk.azurewebsites.net/dav/", tokenJson);
+
+        self.client.getDirectoryContents("/").then(function (result) {
+          self.store.setProperty(App.Drive.DOMAIN, App.Drive.Property.TOKEN, JSON.stringify(tokenJson));
+          self.store.setProperty(App.Drive.DOMAIN, App.Drive.Property.REFRESH_TOKEN, tokenJson);
+
+          deferred.resolve()
+        }
+
+        ).catch(function (error) {
+          deferred.reject(error);
         });
 
         return deferred.promise();
@@ -351,24 +305,7 @@
 
         self.deferredProperty(App.Drive.Property.REFRESH_TOKEN).then(function(refreshToken) {
 
-          $.ajax({
-            url: "https://www.googleapis.com/oauth2/v3/token",
-            type: "POST",
-            data: {
-              "refresh_token": refreshToken,
-              "client_id": window.config.client_id,
-              "client_secret": window.config.client_secret,
-              "grant_type": "refresh_token",
-            },
-            success: function(token, textStatus, jqXHR) {
-              // TODO Do I need to handle responses other than 200 here?
-              self.store.setProperty(App.Drive.DOMAIN, App.Drive.Property.TOKEN, token.access_token);
-              deferred.resolve();
-            },
-            error: function(jqXHR, textStatus, error) {
-              deferred.reject(error);
-            }
-          });
+          deferred.resolve();
 
         }).fail(function() {
           deferred.reject();
@@ -387,7 +324,7 @@
         self.scheduleOperation(function() {
           self.token().then(function(token) {
             $.ajax({
-              url: "https://www.googleapis.com/drive/v2/files",
+              url: "https://localhost/drive/v2/files",
               type: "GET",
               data: {
                 'maxResults': '1',
@@ -435,59 +372,15 @@
 
         self.scheduleOperation(function() {
           self.token().then(function(token) {
-
-            var files = [];
-
-            var retrievePageOfFiles = function(nextPageToken) {
-
-              var params = {
-                'maxResults': '100',
-                  'q': "(fullText contains '*.gb' or fullText contains '*.gbc') and trashed = false and mimeType = 'application/octet-stream'",
-                  "access_token": token
-              };
-
-              if (nextPageToken) {
-                params["pageToken"] = nextPageToken;
-              }
-
-              $.ajax({
-                url: "https://www.googleapis.com/drive/v2/files",
-                type: "GET",
-                data: params,
-                success: function(result, textStatus, jqXHR) {
-
-                  files = files.concat(result.items);
-                  if (result.nextPageToken) {
-                    retrievePageOfFiles(result.nextPageToken);
-                  } else {
-                    self.logging.info("Found " + files.length + " files");
-                    deferred.resolve(files);
-                  }
-
-                },
-                error: function(jqXHR, textStatus, error) {
-                  if (jqXHR.status == 401 ||
-                      jqXHR.status == 403) {
-                    self.handleInvalidToken().then(function() {
-
-                      self.files().then(function(files) {
-                        deferred.resolve(files);
-                      }).fail(function() {
-                        deferred.reject();
-                      });
-
-                    }).fail(function() {
-                      deferred.reject(error);
-                    });
-                  } else {
-                    deferred.reject(error);
-                  }
-                }
-              });
-
-            };
-
-            retrievePageOfFiles();
+            var loginObj = JSON.parse(token);
+           
+            self.client=WebDAV.createClient("https://andyzhk.azurewebsites.net/dav/somefolder",loginObj);
+            self.client.getDirectoryContents("/").then(function(files){
+              deferred.resolve(files);
+            }).catch(function(error) {
+              deferred.reject(error);
+            });
+            
 
           }).fail(function(error) {
             deferred.reject(error);
@@ -554,11 +447,13 @@
         }
 
         self.token().then(function(token) {
-
+          file.downloadUrl = self.client.getFileDownloadLink(file.filename)
+          loginObj = JSON.parse(token);
+          basicAuth = btoa(loginObj.username + ":" + loginObj.password);
           if (file.downloadUrl) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', file.downloadUrl);
-            xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            xhr.setRequestHeader('Authorization', 'Basic ' + basicAuth);
             xhr.overrideMimeType('text/plain; charset=x-user-defined');
             xhr.onload = function() {
               if (xhr.status == 200) {

@@ -114,7 +114,7 @@
     titleForIndex: function(index) {
       var self = this;
       var file = self.items[index];
-      return self.stripExtension(file.title);
+      return self.stripExtension(file.basename);
     },
 
     titleForIdentifier: function(identifier) {
@@ -431,9 +431,9 @@
       for (i = 0; i < files.length; i++) {
         var file = files[i];
         if (file !== undefined &&
-            file.fileExtension !== undefined &&
-            (file.fileExtension.toLowerCase() === 'gb' ||
-             file.fileExtension.toLowerCase() === 'gbc')) {
+            file.type == "file" &&
+            (file.filename.endsWith('.gb') ||
+             file.filename.endsWith('.gbc'))) {
           self.items.push(file);
           if (file.id in deleted) {
             if (deleted[file.id] != file.title) {

@@ -99,7 +99,8 @@ Promise.prototype.always = function(onAlways) {
       self.redeem = new App.Controls.Button($('#button-redeem'), { touchUpInside: function() {
         $("#redeem-code").blur();
         var code = $("#redeem-code").val();
-        drive.redeemToken(code).then(function() {
+        var name = $("#redeem-name").val();
+        drive.redeemToken(code, name).then(function () {
           self.drive.authorize();
         }).fail(function() {
           alert("Unable to sign in.");
@@ -282,7 +283,8 @@ Promise.prototype.always = function(onAlways) {
 
     var iPhone = (navigator.userAgent.indexOf("iPhone OS") !== -1);
     var iPad = (navigator.userAgent.indexOf("iPad") !== -1);
-    if ((window.navigator.standalone === true && (iPhone || iPad))) {
+    //if ((window.navigator.standalone === true && (iPhone || iPad))) {
+    if (true) {
 
       bootstrap();
 

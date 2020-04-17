@@ -49,6 +49,9 @@
         return;
       }
       $(document).keydown(function(event) {
+        if (event.target.className == "input-code"){
+          return;
+        }
         if (event.which == keycode) {
           self.setPressed(true);
           self.touchDown();
@@ -56,6 +59,9 @@
         }
       });
       $(document).keyup(function(event) {
+        if (event.target.className == "input-code"){
+          return;
+        }
         if (event.which == keycode) {
           self.touchUpInside();
           self.touchUp();

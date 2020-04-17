@@ -55,6 +55,9 @@
       self.right = false;
 
       $(document).keydown(function(event) {
+        if (event.target.className == "input-code"){
+          return;
+        }
         var keycode = event.which;
         if (keycode == 37) {
           self.setLeft(true);
@@ -71,6 +74,9 @@
         }
       });
       $(document).keyup(function(event) {
+        if (event.target.className == "input-code"){
+          return;
+        }
         var keycode = event.which;
         if (keycode == 37) {
           self.setLeft(false);
