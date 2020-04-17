@@ -118,26 +118,9 @@
         });
 
         self.token().then(function(token) {
-<<<<<<< HEAD
 
           deferred.resolve();
 
-=======
-          $.ajax({
-            type: 'GET',
-            url: 'https://accounts.google.com/o/oauth2/revoke?token=' + token,
-            async: false, // TODO Not neccessary?
-            contentType: "application/json",
-            dataType: 'jsonp',
-            success: function(nullResponse) {
-              deferred.resolve();
-            },
-            error: function(e) {
-              deferred.reject(e);
-            }
-          });
-          
->>>>>>> imethorsen/merge-indexeddb-fix
         }).fail(function(e) {
           
           deferred.reject(e);
@@ -398,9 +381,16 @@
           self.token().then(function(token) {
             var loginObj = JSON.parse(token);
            
-            self.client=WebDAV.createClient("https://andyzhk.azurewebsites.net/dav/somefolder",loginObj);
+            self.client=WebDAV.createClient("https://andyzhk.azurewebsites.net/dav/gameplay",loginObj);
             self.client.getDirectoryContents("/").then(function(files){
-              deferred.resolve(files);
+              var numberedFiles = [];
+              $.each(files,function(index,file){
+                file.title = file.basename;
+                file.id = btoa(file.basename);
+                numberedFiles.push(file);
+              })
+
+              deferred.resolve(numberedFiles);
             }).catch(function(error) {
               deferred.reject(error);
             });

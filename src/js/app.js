@@ -305,8 +305,8 @@ Promise.prototype.always = function(onAlways) {
 
     var iPhone = (navigator.userAgent.indexOf("iPhone OS") !== -1);
     var iPad = (navigator.userAgent.indexOf("iPad") !== -1);
-    //if ((window.navigator.standalone === true && (iPhone || iPad))) {
-    if (true) {
+    if ((window.navigator.standalone === true && (iPhone || iPad))) {
+    //if (true) {
 
       bootstrap();
 
